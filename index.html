@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xsukax Face Recognition Biometric Manager</title>
+    <script src="face-api.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .drag-over { border-color: #3b82f6 !important; background-color: #dbeafe !important; }
+        .notification { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .fade-out { animation: fadeOut 0.3s ease-out forwards; }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+        .modal-backdrop { backdrop-filter: blur(4px); }
+        .spinner { border: 3px solid #f3f4f6; border-top: 3px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <div id="modalContainer"></div>
+    
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex flex-col items-center">
+            <div class="spinner mb-4"></div>
+            <p id="loadingText" class="text-gray-700 font-medium">Loading models...</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">xsukax Face Recognition Biometric Manager</h1>
+            <p class="text-gray-600">Advanced client-side face detection and biometric data management system</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Add New Biometric Entry</h2>
+                
+                <div id="dropZone" class="border-4 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors mb-4">
+                    <p class="text-gray-600 mb-2">Drag and drop images here or click to select</p>
+                    <p class="text-sm text-gray-500">Supports JPG, PNG, WebP formats</p>
+                    <input type="file" id="imageInput" accept="image/*" multiple class="hidden">
+                </div>
+
+                <div id="previewContainer" class="grid grid-cols-2 gap-4 mb-4"></div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="personName" class="block text-sm font-medium text-gray-700 mb-1">Person Name</label>
+                        <input type="text" id="personName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter person's name">
+                    </div>
+                    
+                    <div>
+                        <label for="personMetadata" class="block text-sm font-medium text-gray-700 mb-1">Metadata (Optional)</label>
+                        <textarea id="personMetadata" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Add notes, department, ID number, etc."></textarea>
+                    </div>
+
+                    <button id="processFacesBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        Process and Save Biometric Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Stored Biometric Profiles</h2>
+                
+                <div class="mb-4 flex gap-2">
+                    <button id="exportAllBtn" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                        Export All Data
+                    </button>
+                    <button id="importBtn" class="flex-1 bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors">
+                        Import JSON
+                    </button>
+                    <input type="file" id="importInput" accept=".json" multiple class="hidden">
+                </div>
+
+                <div id="profilesList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Face Recognition & Matching</h2>
+            
+            <div id="matchDropZone" class="border-4 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors mb-4">
+                <p class="text-gray-600 mb-2">Upload image to match against stored biometrics</p>
+                <p class="text-sm text-gray-500">Click or drag to select image</p>
+                <input type="file" id="matchImageInput" accept="image/*" class="hidden">
+            </div>
+
+            <div id="matchPreview" class="mb-4"></div>
+
+            <div id="matchResults" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <script>
+        class BiometricManager {
+            constructor() {
+                this.modelsLoaded = false;
+                this.profiles = [];
+                this.pendingImages = [];
+                this.init();
+            }
+
+            async init() {
+                this.showLoading('Loading face detection models...');
+                try {
+                    await this.loadModels();
+                    this.loadProfiles();
+                    this.setupEventListeners();
+                    this.renderProfiles();
+                    this.showNotification('System ready', 'success');
+                } catch (error) {
+                    this.showNotification('Failed to load models: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async loadModels() {
+    const MODEL_URL = './model';
+    try {
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        this.modelsLoaded = true;
+    } catch (error) {
+        throw new Error(`Failed to load models: ${error.message}. Make sure the 'model' folder exists with all required files.`);
+    }
+}
+
+            setupEventListeners() {
+                const dropZone = document.getElementById('dropZone');
+                const imageInput = document.getElementById('imageInput');
+                const matchDropZone = document.getElementById('matchDropZone');
+                const matchImageInput = document.getElementById('matchImageInput');
+                const processFacesBtn = document.getElementById('processFacesBtn');
+                const exportAllBtn = document.getElementById('exportAllBtn');
+                const importBtn = document.getElementById('importBtn');
+                const importInput = document.getElementById('importInput');
+
+                dropZone.addEventListener('click', () => imageInput.click());
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                });
+                dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                    this.handleImageUpload(e.dataTransfer.files);
+                });
+                imageInput.addEventListener('change', (e) => this.handleImageUpload(e.target.files));
+
+                matchDropZone.addEventListener('click', () => matchImageInput.click());
+                matchDropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    matchDropZone.classList.add('drag-over');
+                });
+                matchDropZone.addEventListener('dragleave', () => matchDropZone.classList.remove('drag-over'));
+                matchDropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    matchDropZone.classList.remove('drag-over');
+                    this.handleMatchImageUpload(e.dataTransfer.files);
+                });
+                matchImageInput.addEventListener('change', (e) => this.handleMatchImageUpload(e.target.files));
+
+                processFacesBtn.addEventListener('click', () => this.processFaces());
+                exportAllBtn.addEventListener('click', () => this.exportAllData());
+                importBtn.addEventListener('click', () => importInput.click());
+                importInput.addEventListener('change', (e) => this.importData(e.target.files));
+            }
+
+            handleImageUpload(files) {
+                const previewContainer = document.getElementById('previewContainer');
+                previewContainer.innerHTML = '';
+                this.pendingImages = [];
+
+                Array.from(files).forEach((file, idx) => {
+                    if (!file.type.startsWith('image/')) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.pendingImages.push({ data: e.target.result, name: file.name });
+                        
+                        const div = document.createElement('div');
+                        div.className = 'relative';
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="w-full h-32 object-cover rounded-lg border-2 border-gray-200">
+                            <button class="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold hover:bg-red-600" data-idx="${idx}">×</button>
+                        `;
+                        div.querySelector('button').addEventListener('click', (e) => {
+                            const index = parseInt(e.target.dataset.idx);
+                            this.pendingImages.splice(index, 1);
+                            div.remove();
+                        });
+                        previewContainer.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            async processFaces() {
+                const name = document.getElementById('personName').value.trim();
+                const metadata = document.getElementById('personMetadata').value.trim();
+
+                if (!name) {
+                    this.showNotification('Please enter a person name', 'error');
+                    return;
+                }
+
+                if (this.pendingImages.length === 0) {
+                    this.showNotification('Please upload at least one image', 'error');
+                    return;
+                }
+
+                this.showLoading('Processing faces...');
+                const descriptors = [];
+
+                try {
+                    for (const imgData of this.pendingImages) {
+                        const img = await this.loadImage(imgData.data);
+                        const detection = await faceapi.detectSingleFace(img)
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+
+                        if (detection) {
+                            descriptors.push(Array.from(detection.descriptor));
+                        }
+                    }
+
+                    if (descriptors.length === 0) {
+                        this.showNotification('No faces detected in uploaded images', 'error');
+                        this.hideLoading();
+                        return;
+                    }
+
+                    const existingProfile = this.profiles.find(p => p.name.toLowerCase() === name.toLowerCase());
+                    
+                    if (existingProfile) {
+                        existingProfile.descriptors.push(...descriptors);
+                        existingProfile.metadata = metadata;
+                        existingProfile.imageCount += descriptors.length;
+                        existingProfile.updated = new Date().toISOString();
+                    } else {
+                        this.profiles.push({
+                            id: Date.now().toString(),
+                            name,
+                            metadata,
+                            descriptors,
+                            imageCount: descriptors.length,
+                            created: new Date().toISOString(),
+                            updated: new Date().toISOString()
+                        });
+                    }
+
+                    this.saveProfiles();
+                    this.renderProfiles();
+                    this.clearForm();
+                    this.showNotification(`Successfully processed ${descriptors.length} face(s) for ${name}`, 'success');
+                } catch (error) {
+                    this.showNotification('Error processing faces: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async handleMatchImageUpload(files) {
+                if (files.length === 0) return;
+                if (this.profiles.length === 0) {
+                    this.showNotification('No profiles available for matching', 'error');
+                    return;
+                }
+
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const matchPreview = document.getElementById('matchPreview');
+                    matchPreview.innerHTML = `<img src="${e.target.result}" class="max-w-xs mx-auto rounded-lg shadow-md">`;
+                    
+                    this.showLoading('Analyzing face...');
+                    try {
+                        await this.matchFace(e.target.result);
+                    } catch (error) {
+                        this.showNotification('Error matching face: ' + error.message, 'error');
+                    } finally {
+                        this.hideLoading();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+
+            async matchFace(imageData) {
+                const img = await this.loadImage(imageData);
+                const detection = await faceapi.detectSingleFace(img)
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (!detection) {
+                    this.showNotification('No face detected in image', 'error');
+                    document.getElementById('matchResults').innerHTML = '<p class="text-gray-600 text-center">No face detected</p>';
+                    return;
+                }
+
+                const matches = [];
+                for (const profile of this.profiles) {
+                    const distances = profile.descriptors.map(desc => 
+                        faceapi.euclideanDistance(detection.descriptor, new Float32Array(desc))
+                    );
+                    const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
+                    const matchPercentage = Math.max(0, Math.min(100, (1 - avgDistance) * 100));
+                    
+                    matches.push({
+                        name: profile.name,
+                        metadata: profile.metadata,
+                        percentage: matchPercentage.toFixed(2),
+                        confidence: matchPercentage > 70 ? 'High' : matchPercentage > 50 ? 'Medium' : 'Low'
+                    });
+                }
+
+                matches.sort((a, b) => b.percentage - a.percentage);
+                this.renderMatchResults(matches);
+            }
+
+            renderMatchResults(matches) {
+                const container = document.getElementById('matchResults');
+                container.innerHTML = '<h3 class="font-semibold text-lg mb-3">Match Results</h3>';
+
+                matches.forEach(match => {
+                    const confidenceColor = match.confidence === 'High' ? 'text-green-600' : 
+                                           match.confidence === 'Medium' ? 'text-yellow-600' : 'text-red-600';
+                    const bgColor = match.confidence === 'High' ? 'bg-green-50' : 
+                                   match.confidence === 'Medium' ? 'bg-yellow-50' : 'bg-red-50';
+                    
+                    const div = document.createElement('div');
+                    div.className = `p-4 ${bgColor} rounded-lg border border-gray-200`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-semibold text-lg">${match.name}</h4>
+                                ${match.metadata ? `<p class="text-sm text-gray-600 mt-1">${match.metadata}</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-bold ${confidenceColor}">${match.percentage}%</p>
+                                <p class="text-sm ${confidenceColor}">${match.confidence} Confidence</p>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            renderProfiles() {
+                const container = document.getElementById('profilesList');
+                
+                if (this.profiles.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No profiles stored yet</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                this.profiles.forEach(profile => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-lg">${profile.name}</h3>
+                                <p class="text-sm text-gray-600">${profile.imageCount} biometric sample(s)</p>
+                                ${profile.metadata ? `<p class="text-sm text-gray-600 mt-1">${profile.metadata}</p>` : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600" data-action="edit" data-id="${profile.id}">Edit</button>
+                                <button class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600" data-action="export" data-id="${profile.id}">Export</button>
+                                <button class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600" data-action="delete" data-id="${profile.id}">Delete</button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500">Updated: ${new Date(profile.updated).toLocaleString()}</p>
+                    `;
+                    
+                    div.querySelectorAll('button').forEach(btn => {
+                        btn.addEventListener('click', () => this.handleProfileAction(btn.dataset.action, btn.dataset.id));
+                    });
+                    
+                    container.appendChild(div);
+                });
+            }
+
+            handleProfileAction(action, id) {
+                const profile = this.profiles.find(p => p.id === id);
+                if (!profile) return;
+
+                switch (action) {
+                    case 'edit':
+                        this.showEditModal(profile);
+                        break;
+                    case 'export':
+                        this.exportProfile(profile);
+                        break;
+                    case 'delete':
+                        this.showDeleteModal(profile);
+                        break;
+                }
+            }
+
+            showEditModal(profile) {
+                const modal = this.createModal('Edit Profile', `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input type="text" id="editName" value="${profile.name}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Metadata</label>
+                            <textarea id="editMetadata" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">${profile.metadata || ''}</textarea>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="saveEdit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700">Save Changes</button>
+                            <button id="cancelEdit" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400">Cancel</button>
+                        </div>
+                    </div>
+                `);
+
+                document.getElementById('saveEdit').addEventListener('click', () => {
+                    profile.name = document.getElementById('editName').value.trim();
+                    profile.metadata = document.getElementById('editMetadata').value.trim();
+                    profile.updated = new Date().toISOString();
+                    this.saveProfiles();
+                    this.renderProfiles();
+                    this.closeModal();
+                    this.showNotification('Profile updated successfully', 'success');
+                });
+
+                document.getElementById('cancelEdit').addEventListener('click', () => this.closeModal());
+            }
+
+            showDeleteModal(profile) {
+                const modal = this.createModal('Confirm Deletion', `
+                    <p class="text-gray-700 mb-4">Are you sure you want to delete the profile for <strong>${profile.name}</strong>? This action cannot be undone.</p>
+                    <div class="flex gap-2">
+                        <button id="confirmDelete" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700">Delete</button>
+                        <button id="cancelDelete" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400">Cancel</button>
+                    </div>
+                `);
+
+                document.getElementById('confirmDelete').addEventListener('click', () => {
+                    this.profiles = this.profiles.filter(p => p.id !== profile.id);
+                    this.saveProfiles();
+                    this.renderProfiles();
+                    this.closeModal();
+                    this.showNotification('Profile deleted successfully', 'success');
+                });
+
+                document.getElementById('cancelDelete').addEventListener('click', () => this.closeModal());
+            }
+
+            createModal(title, content) {
+                const container = document.getElementById('modalContainer');
+                container.innerHTML = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-40">
+                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                            <h2 class="text-2xl font-semibold text-gray-800 mb-4">${title}</h2>
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            }
+
+            closeModal() {
+                document.getElementById('modalContainer').innerHTML = '';
+            }
+
+            exportProfile(profile) {
+                const dataStr = JSON.stringify(profile, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${profile.name.replace(/\s+/g, '_')}_biometric.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showNotification('Profile exported successfully', 'success');
+            }
+
+            exportAllData() {
+                if (this.profiles.length === 0) {
+                    this.showNotification('No profiles to export', 'error');
+                    return;
+                }
+
+                const dataStr = JSON.stringify(this.profiles, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `all_biometric_profiles_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showNotification('All profiles exported successfully', 'success');
+            }
+
+            async importData(files) {
+                if (files.length === 0) return;
+
+                this.showLoading('Importing profiles...');
+                let importCount = 0;
+
+                for (const file of files) {
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        
+                        if (Array.isArray(data)) {
+                            data.forEach(profile => {
+                                if (this.validateProfile(profile)) {
+                                    const existing = this.profiles.find(p => p.id === profile.id);
+                                    if (!existing) {
+                                        this.profiles.push(profile);
+                                        importCount++;
+                                    }
+                                }
+                            });
+                        } else if (this.validateProfile(data)) {
+                            const existing = this.profiles.find(p => p.id === data.id);
+                            if (!existing) {
+                                this.profiles.push(data);
+                                importCount++;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Import error:', error);
+                    }
+                }
+
+                this.saveProfiles();
+                this.renderProfiles();
+                this.hideLoading();
+                this.showNotification(`Successfully imported ${importCount} profile(s)`, 'success');
+            }
+
+            validateProfile(profile) {
+                return profile && profile.name && profile.descriptors && Array.isArray(profile.descriptors);
+            }
+
+            clearForm() {
+                document.getElementById('personName').value = '';
+                document.getElementById('personMetadata').value = '';
+                document.getElementById('previewContainer').innerHTML = '';
+                document.getElementById('imageInput').value = '';
+                this.pendingImages = [];
+            }
+
+            loadImage(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = src;
+                });
+            }
+
+            saveProfiles() {
+                localStorage.setItem('biometricProfiles', JSON.stringify(this.profiles));
+            }
+
+            loadProfiles() {
+                const stored = localStorage.getItem('biometricProfiles');
+                this.profiles = stored ? JSON.parse(stored) : [];
+            }
+
+            showLoading(text) {
+                document.getElementById('loadingText').textContent = text;
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+
+            showNotification(message, type) {
+                const container = document.getElementById('notificationContainer');
+                const notification = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+                
+                notification.className = `notification ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg max-w-sm`;
+                notification.textContent = message;
+                container.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        const app = new BiometricManager();
+    </script>
+</body>
+</html>
