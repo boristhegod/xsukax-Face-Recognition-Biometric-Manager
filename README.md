@@ -1,6 +1,6 @@
 # xsukax Face Recognition Biometric Manager
 
-A privacy-focused, client-side face recognition application that enables secure biometric data management entirely within your browser. No server uploads, no cloud storage—your facial data never leaves your device.
+A privacy-focused, client-side face recognition application that enables secure biometric data management entirely within your browser. No server uploads, no cloud storage - your facial data never leaves your device.
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://xsukax.github.io/xsukax-Face-Recognition-Biometric-Manager/)
 [![License](https://img.shields.io/badge/license-GPL%20v3.0-blue.svg)](LICENSE)
