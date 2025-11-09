@@ -21,7 +21,7 @@
         .person-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); border: 1px solid #e5e7eb; }
         .person-card:hover { transform: translateY(-6px); box-shadow: 0 12px 32px rgba(0,0,0,0.12); border-color: #3b82f6; }
         .face-image { max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .face-thumbnail { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin: 6px; border: 3px solid #e5e7eb; cursor: pointer; transition: all 0.25s ease; }
+        .face-thumbnail { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin: 6px; border: 3px solid #e5e7eb; cursor: pointer; transition: all 0.25s ease; flex-shrink: 0; }
         .face-thumbnail:hover { border-color: #3b82f6; transform: scale(1.08); box-shadow: 0 6px 16px rgba(59,130,246,0.3); }
         .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; transition: all 0.2s ease; cursor: pointer; font-size: 20px; }
         .icon-btn:hover { transform: translateY(-2px); }
@@ -43,6 +43,10 @@
         .badge-error { background-color: #fee2e2; color: #991b1b; }
         .badge-info { background-color: #dbeafe; color: #1e40af; }
         .storage-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 16px; border-radius: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px; }
+        #editFaceImages::-webkit-scrollbar { width: 8px; }
+        #editFaceImages::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        #editFaceImages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        #editFaceImages::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         @media (max-width: 640px) { 
             .modal-content { width: 95%; margin: 10% auto; padding: 16px; } 
             .notification { right: 10px; left: 10px; min-width: auto; } 
@@ -58,7 +62,9 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">xsukax Face Recognition Biometric Manager</h1>
-                    <p class="text-sm text-gray-600 mt-1">Unlimited storage with IndexedDB • High-quality images</p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <span class="font-semibold">♾️ Unlimited images per person</span> • IndexedDB storage • High-quality recognition
+                    </p>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center">
                     <div id="storageInfo" class="storage-info">
@@ -83,7 +89,7 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900">👥 Person Management</h2>
-                        <p class="text-sm text-gray-600 mt-1">Add and manage registered persons</p>
+                        <p class="text-sm text-gray-600 mt-1">Add unlimited face images per person • Higher quality = Better accuracy</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <input type="file" id="importData" accept=".json" class="hidden" multiple>
@@ -136,6 +142,36 @@
                 </div>
             </div>
         </section>
+
+        <!-- Best Practices Info -->
+        <section class="mt-6">
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">💡 Best Practices for Unlimited Images</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">📸</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Multiple Angles</p>
+                            <p class="text-gray-600">Add photos from front, side, and various angles for better recognition</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">💡</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">Different Lighting</p>
+                            <p class="text-gray-600">Include images with natural light, indoor lighting, and various conditions</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🎯</span>
+                        <div>
+                            <p class="font-semibold text-gray-900">High Quality</p>
+                            <p class="text-gray-600">Use clear, high-resolution images for maximum accuracy (no limit on size or quantity)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Add Person Modal -->
@@ -176,12 +212,21 @@
                     <textarea id="editPersonDescription" class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3"></textarea>
                 </div>
                 <div class="mb-5">
-                    <label class="block text-gray-800 text-sm font-semibold mb-2">Face Images</label>
-                    <div id="editFaceImages" class="flex flex-wrap gap-2 mb-3 min-h-[60px] p-3 bg-gray-50 rounded-lg"></div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-800 text-sm font-semibold">Face Images</label>
+                        <div class="flex gap-2 items-center">
+                            <span id="faceCountBadge" class="badge badge-info">0 images</span>
+                            <button type="button" id="clearAllFacesBtn" class="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-all font-medium hidden">
+                                🗑 Clear All
+                            </button>
+                        </div>
+                    </div>
+                    <div id="editFaceImages" class="flex flex-wrap gap-2 mb-3 min-h-[100px] max-h-[300px] overflow-y-auto p-3 bg-gray-50 rounded-lg border-2 border-gray-200"></div>
                     <div id="editDropArea" class="drop-area">
-                        <p class="text-gray-700 font-medium mb-2">Drag & drop images here</p>
+                        <p class="text-gray-700 font-medium mb-2">🖼️ Drag & drop images here</p>
+                        <p class="text-xs text-gray-500 mb-3">Add as many images as you want for better recognition accuracy</p>
                         <input type="file" id="editImageUpload" accept="image/*" multiple class="hidden">
-                        <button type="button" id="editBrowseBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium">Add Images</button>
+                        <button type="button" id="editBrowseBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium">➕ Add More Images</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-end gap-3">
@@ -696,15 +741,18 @@
                         <p class="text-gray-700 text-sm mb-4 min-h-[40px]">${person.description || 'No description provided'}</p>
                         <div class="mb-4">
                             <div class="flex justify-between text-xs text-gray-500 mb-2">
-                                <span>Face Data</span>
-                                <span>${faceCount} ${faceCount === 1 ? 'entry' : 'entries'}</span>
+                                <span>Registered Faces</span>
+                                <span class="font-bold ${faceCount > 0 ? 'text-blue-600' : 'text-gray-400'}">${faceCount} ${faceCount === 1 ? 'image' : 'images'}</span>
                             </div>
                             <div class="progress-bar-container">
-                                <div class="progress-bar-fill" style="width: ${Math.min(100, faceCount * 10)}%"></div>
+                                <div class="progress-bar-fill" style="width: ${faceCount === 0 ? 0 : Math.min(100, 20 + (faceCount * 2))}%"></div>
                             </div>
+                            <p class="text-xs text-gray-500 mt-1 text-right">
+                                ${faceCount === 0 ? 'No images yet' : faceCount < 5 ? 'Add more for better accuracy' : faceCount < 10 ? 'Good coverage' : faceCount < 20 ? 'Excellent coverage' : 'Outstanding coverage (' + faceCount + ' images)'}
+                            </p>
                         </div>
                         <button class="add-images-btn w-full px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg font-semibold" data-id="${person.id}">
-                            📸 Add Face Images
+                            📸 Add Face Images (Unlimited)
                         </button>
                     </div>
                 `;
@@ -768,13 +816,36 @@
             
             const faces = await state.db.getFacesByPerson(personId);
             
+            // Update face count badge
+            const faceCountBadge = document.getElementById('faceCountBadge');
+            faceCountBadge.textContent = `${faces.length} ${faces.length === 1 ? 'image' : 'images'}`;
+            faceCountBadge.className = `badge ${faces.length > 0 ? 'badge-success' : 'badge-warning'}`;
+            
+            // Show/hide clear all button
+            const clearAllBtn = document.getElementById('clearAllFacesBtn');
+            if (faces.length > 0) {
+                clearAllBtn.classList.remove('hidden');
+                clearAllBtn.onclick = () => {
+                    showConfirmModal(`Are you sure you want to delete all ${faces.length} face image(s)? This cannot be undone.`, async () => {
+                        for (const face of faces) {
+                            await state.db.deleteFace(face.id);
+                        }
+                        await updateStorageInfo();
+                        await openEditPersonModal(personId);
+                        showNotification(`✅ Deleted ${faces.length} face image(s)`, 'success');
+                    });
+                };
+            } else {
+                clearAllBtn.classList.add('hidden');
+            }
+            
             if (faces.length > 0) {
                 for (const face of faces) {
                     const faceDiv = document.createElement('div');
                     faceDiv.className = 'relative group';
                     faceDiv.innerHTML = `
-                        <img src="${face.imageData}" class="face-thumbnail" data-id="${face.id}" alt="Face">
-                        <button class="remove-face-btn absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100" data-id="${face.id}" title="Remove">
+                        <img src="${face.imageData}" class="face-thumbnail" data-id="${face.id}" alt="Face" title="${face.metadata?.filename || 'Face image'}">
+                        <button class="remove-face-btn absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100" data-id="${face.id}" title="Remove this image">
                             <span class="text-white font-bold text-lg">✕</span>
                         </button>
                     `;
@@ -788,7 +859,13 @@
                     });
                 });
             } else {
-                faceImagesContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No face images added yet</p>';
+                faceImagesContainer.innerHTML = `
+                    <div class="w-full text-center py-8">
+                        <div class="text-5xl mb-3">📸</div>
+                        <p class="text-gray-500 text-sm font-medium">No face images added yet</p>
+                        <p class="text-gray-400 text-xs mt-1">Add multiple images from different angles for best results</p>
+                    </div>
+                `;
             }
             
             elements.editPersonModal.style.display = 'block';
@@ -805,12 +882,18 @@
             elements.processingModal.style.display = 'block';
             elements.processingBar.style.width = '0%';
             elements.processingText.textContent = '0%';
-            elements.processingStatus.innerHTML = '<div class="spinner mx-auto mb-3"></div><p>Initializing...</p>';
+            elements.processingStatus.innerHTML = '<div class="spinner mx-auto mb-3"></div><p>Initializing face detection...</p>';
+            
+            // Show special message for large batches
+            if (files.length > 20) {
+                showNotification(`📦 Processing ${files.length} images. This may take a few minutes...`, 'info');
+            }
             
             try {
                 const totalFiles = files.length;
                 let processedCount = 0;
                 let successCount = 0;
+                let facesDetected = 0;
                 
                 for (let i = 0; i < totalFiles; i++) {
                     const file = files[i];
@@ -819,20 +902,33 @@
                     
                     elements.processingBar.style.width = `${progress}%`;
                     elements.processingText.textContent = `${progress}%`;
-                    elements.processingStatus.innerHTML = `<p>Processing ${file.name}</p><p class="text-sm text-gray-500 mt-1">(${processedCount}/${totalFiles})</p>`;
+                    elements.processingStatus.innerHTML = `
+                        <p>Processing ${file.name}</p>
+                        <p class="text-sm text-gray-500 mt-1">(${processedCount}/${totalFiles})</p>
+                        <p class="text-xs text-blue-600 mt-2">${facesDetected} faces detected so far</p>
+                    `;
                     
                     try {
-                        await processSingleImageForPerson(file, personId);
-                        successCount++;
+                        const detectedFaces = await processSingleImageForPerson(file, personId);
+                        if (detectedFaces > 0) {
+                            successCount++;
+                            facesDetected += detectedFaces;
+                        }
                     } catch (error) {
                         console.error(`Failed: ${file.name}`, error);
                     }
                 }
                 
-                elements.processingStatus.innerHTML = `<p class="text-green-600 font-semibold">✅ Complete!</p><p class="text-sm mt-2">Processed ${successCount} of ${totalFiles} images</p>`;
+                elements.processingStatus.innerHTML = `
+                    <p class="text-green-600 font-semibold text-lg">✅ Complete!</p>
+                    <p class="text-sm mt-2">Processed ${successCount} of ${totalFiles} images</p>
+                    <p class="text-sm text-blue-600 font-medium mt-1">Total: ${facesDetected} faces detected</p>
+                `;
                 
                 if (successCount > 0) {
-                    showNotification(`✅ Successfully processed ${successCount} image(s)`, 'success');
+                    showNotification(`✅ Successfully added ${facesDetected} face(s) from ${successCount} image(s)`, 'success');
+                } else {
+                    showNotification('⚠️ No faces detected in any images', 'warning');
                 }
                 
                 await renderPersonData();
@@ -840,7 +936,7 @@
                 
                 setTimeout(() => {
                     elements.processingModal.style.display = 'none';
-                }, 2000);
+                }, 2500);
                 
             } catch (error) {
                 elements.processingStatus.innerHTML = `<p class="text-red-600 font-semibold">❌ Error</p><p class="text-sm mt-2">${error.message}</p>`;
@@ -867,7 +963,7 @@
                             .withFaceDescriptors();
                         
                         if (detections.length === 0) {
-                            resolve();
+                            resolve(0);
                             return;
                         }
                         
@@ -887,7 +983,7 @@
                             });
                         }
                         
-                        resolve();
+                        resolve(detections.length);
                     } catch (error) {
                         reject(new Error(`Face detection failed: ${error.message}`));
                     }
@@ -916,10 +1012,15 @@
             elements.processingText.textContent = '0%';
             elements.processingStatus.innerHTML = '<div class="spinner mx-auto mb-3"></div><p>Initializing...</p>';
             
+            if (files.length > 20) {
+                showNotification(`📦 Processing ${files.length} images...`, 'info');
+            }
+            
             try {
                 const totalFiles = files.length;
                 let processedCount = 0;
                 let successCount = 0;
+                let facesDetected = 0;
                 
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
@@ -928,20 +1029,30 @@
                     
                     elements.processingBar.style.width = `${progress}%`;
                     elements.processingText.textContent = `${progress}%`;
-                    elements.processingStatus.innerHTML = `<p>Processing ${file.name}</p><p class="text-sm text-gray-500 mt-1">(${processedCount}/${totalFiles})</p>`;
+                    elements.processingStatus.innerHTML = `
+                        <p>Processing ${file.name}</p>
+                        <p class="text-sm text-gray-500 mt-1">(${processedCount}/${totalFiles})</p>
+                        <p class="text-xs text-blue-600 mt-2">${facesDetected} faces detected</p>
+                    `;
                     
                     try {
-                        await processSingleImageForPerson(file, personId);
-                        successCount++;
+                        const detected = await processSingleImageForPerson(file, personId);
+                        if (detected > 0) {
+                            successCount++;
+                            facesDetected += detected;
+                        }
                     } catch (error) {
                         console.error(`Failed: ${file.name}`, error);
                     }
                 }
                 
-                elements.processingStatus.innerHTML = `<p class="text-green-600 font-semibold">✅ Added ${successCount} images!</p>`;
+                elements.processingStatus.innerHTML = `
+                    <p class="text-green-600 font-semibold">✅ Added ${facesDetected} faces!</p>
+                    <p class="text-sm mt-1">From ${successCount} of ${totalFiles} images</p>
+                `;
                 
                 if (successCount > 0) {
-                    showNotification(`✅ Added ${successCount} image(s)!`, 'success');
+                    showNotification(`✅ Added ${facesDetected} face(s) from ${successCount} image(s)!`, 'success');
                 }
                 
                 await updateStorageInfo();
